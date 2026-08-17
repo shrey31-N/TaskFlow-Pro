@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: taskflow-mysql
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: taskflow_db
+      MYSQL_USER: taskflow
+      MYSQL_PASSWORD: taskflow123
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    networks:
+      - taskflow-network
+
+  user-service:
+    build: .
+
+    container_name: taskflow-user-service
+
+    ports:
+      - "8081:8081"
+
+    depends_on:
+      - mysql
+
+    networks:
+      - taskflow-network
+
+networks:
+  taskflow-network:
+
+volumes:
+  mysql-data:

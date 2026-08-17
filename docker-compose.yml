@@ -1,0 +1,103 @@
+version: '3.9'
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: taskflow-mysql
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: taskflow_db
+      MYSQL_USER: taskflow
+      MYSQL_PASSWORD: taskflow123
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    networks:
+      - taskflow-network
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+  user-service:
+    image: taskflow-user-service:v1
+    container_name: taskflow-user-service
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/taskflow_db
+      SPRING_DATASOURCE_USERNAME: taskflow
+      SPRING_DATASOURCE_PASSWORD: taskflow123
+
+    networks:
+      - taskflow-network
+
+    restart: unless-stopped
+
+
+  project-service:
+    image: taskflow-project-service:v1
+    container_name: taskflow-project-service
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8082:8082"
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/taskflow_db
+      SPRING_DATASOURCE_USERNAME: taskflow
+      SPRING_DATASOURCE_PASSWORD: taskflow123
+
+    networks:
+      - taskflow-network
+
+    restart: unless-stopped
+
+  task-service:
+
+    image: taskflow-task-service:v1
+
+    container_name: taskflow-task-service
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8083:8083"
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/taskflow_db
+      SPRING_DATASOURCE_USERNAME: taskflow
+      SPRING_DATASOURCE_PASSWORD: taskflow123
+
+    networks:
+      - taskflow-network
+
+
+volumes:
+  mysql-data:
+
+
+networks:
+  taskflow-network:
+    driver: bridge
