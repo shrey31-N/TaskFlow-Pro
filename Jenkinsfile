@@ -2,6 +2,14 @@ pipeline {
 
     agent any
 
+    stage('Docker Verification') {
+        steps {
+            bat 'docker --version'
+            bat 'docker info'
+            bat 'docker images'
+        }
+    }
+
     stages {
 
         stage('Checkout') {
@@ -169,7 +177,7 @@ pipeline {
                 echo        BUILD EUREKA SERVER
                 echo ========================================
 
-                docker build -t taskflow-eureka-server:1.0 backend\\discovery-server
+                docker build -t taskflow-discovery-server:1.0 backend\\discovery-server
                 '''
             }
         }
