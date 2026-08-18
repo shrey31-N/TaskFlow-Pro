@@ -115,7 +115,7 @@ pipeline {
 
         stage('Build Eureka Server') {
             steps {
-                dir('backend/eureka-server') {
+                dir('backend/discovery-server') {
                     bat 'mvnw.cmd package -DskipTests'
                 }
             }
