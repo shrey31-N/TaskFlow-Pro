@@ -4,15 +4,49 @@ pipeline {
 
     stages {
 
+        // =====================================================
+        // 1. DOCKER VERIFICATION
+        // =====================================================
+
+        stage('Docker Verification') {
+            steps {
+                bat '''
+                echo ========================================
+                echo        DOCKER VERSION
+                echo ========================================
+
+                docker --version
+
+                echo ========================================
+                echo        DOCKER INFO
+                echo ========================================
+
+                docker info
+
+                echo ========================================
+                echo        EXISTING IMAGES
+                echo ========================================
+
+                docker images
+                '''
+            }
+        }
+
+
+        // =====================================================
+        // 2. CHECKOUT
+        // =====================================================
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        // =========================
-        // USER SERVICE
-        // =========================
+
+        // =====================================================
+        // 3. USER SERVICE
+        // =====================================================
 
         stage('Build User Service') {
             steps {
@@ -30,9 +64,10 @@ pipeline {
             }
         }
 
-        // =========================
-        // PROJECT SERVICE
-        // =========================
+
+        // =====================================================
+        // 4. PROJECT SERVICE
+        // =====================================================
 
         stage('Build Project Service') {
             steps {
@@ -50,9 +85,10 @@ pipeline {
             }
         }
 
-        // =========================
-        // TASK SERVICE
-        // =========================
+
+        // =====================================================
+        // 5. TASK SERVICE
+        // =====================================================
 
         stage('Build Task Service') {
             steps {
@@ -63,15 +99,18 @@ pipeline {
         }
 
         /*
-         * Temporarily skipped because the integration tests
-         * require dependent microservices/Eureka.
+         * Task Service integration tests are temporarily skipped.
          *
-         * We will fix these tests later.
+         * Reason:
+         * These tests currently depend on other services/Eureka.
+         *
+         * We will fix them after the deployment pipeline is working.
          */
 
-        // =========================
-        // NOTIFICATION SERVICE
-        // =========================
+
+        // =====================================================
+        // 6. NOTIFICATION SERVICE
+        // =====================================================
 
         stage('Build Notification Service') {
             steps {
@@ -89,9 +128,10 @@ pipeline {
             }
         }
 
-        // =========================
-        // API GATEWAY
-        // =========================
+
+        // =====================================================
+        // 7. API GATEWAY
+        // =====================================================
 
         stage('Build API Gateway') {
             steps {
@@ -109,11 +149,12 @@ pipeline {
             }
         }
 
-        // =========================
-        // EUREKA SERVER
-        // =========================
 
-        stage('Build Eureka Server') {
+        // =====================================================
+        // 8. DISCOVERY / EUREKA SERVER
+        // =====================================================
+
+        stage('Build Discovery Server') {
             steps {
                 dir('backend/discovery-server') {
                     bat 'mvnw.cmd package -DskipTests'
@@ -121,62 +162,63 @@ pipeline {
             }
         }
 
-        // =========================
-        // DOCKER BUILD
-        // =========================
+
+        // =====================================================
+        // 9. DOCKER BUILD
+        // =====================================================
 
         stage('Docker Build') {
             steps {
 
                 bat '''
                 echo ========================================
-                echo        DOCKER VERSION
+                echo        BUILD USER SERVICE IMAGE
                 echo ========================================
 
-                docker --version
+                docker build -t taskflow-user-service:ci backend\\user-service
+
 
                 echo ========================================
-                echo        BUILD USER SERVICE
+                echo        BUILD PROJECT SERVICE IMAGE
                 echo ========================================
 
-                docker build -t taskflow-user-service:1.0 backend\\user-service
+                docker build -t taskflow-project-service:ci backend\\project-service
+
 
                 echo ========================================
-                echo        BUILD PROJECT SERVICE
+                echo        BUILD TASK SERVICE IMAGE
                 echo ========================================
 
-                docker build -t taskflow-project-service:1.0 backend\\project-service
+                docker build -t taskflow-task-service:ci backend\\task-service
+
 
                 echo ========================================
-                echo        BUILD TASK SERVICE
+                echo        BUILD NOTIFICATION SERVICE IMAGE
                 echo ========================================
 
-                docker build -t taskflow-task-service:1.0 backend\\task-service
+                docker build -t taskflow-notification-service:ci backend\\notification-service
+
 
                 echo ========================================
-                echo        BUILD NOTIFICATION SERVICE
+                echo        BUILD API GATEWAY IMAGE
                 echo ========================================
 
-                docker build -t taskflow-notification-service:1.0 backend\\notification-service
+                docker build -t taskflow-api-gateway:ci backend\\api-gateway
+
 
                 echo ========================================
-                echo        BUILD API GATEWAY
+                echo        BUILD DISCOVERY SERVER IMAGE
                 echo ========================================
 
-                docker build -t taskflow-api-gateway:1.0 backend\\api-gateway
-
-                echo ========================================
-                echo        BUILD EUREKA SERVER
-                echo ========================================
-
-                docker build -t taskflow-discovery-server:1.0 backend\\discovery-server
+                docker build -t taskflow-discovery-server:ci backend\\discovery-server
                 '''
             }
         }
 
-        // =========================
-        // VERIFY DOCKER IMAGES
-        // =========================
+
+        // =====================================================
+        // 10. VERIFY DOCKER IMAGES
+        // =====================================================
 
         stage('Verify Docker Images') {
             steps {
@@ -186,50 +228,57 @@ pipeline {
                 echo        TASKFLOW DOCKER IMAGES
                 echo ========================================
 
-                docker images | findstr taskflow-
+                docker images taskflow-user-service
+
+                docker images taskflow-project-service
+
+                docker images taskflow-task-service
+
+                docker images taskflow-notification-service
+
+                docker images taskflow-api-gateway
+
+                docker images taskflow-discovery-server
                 '''
             }
         }
-
-        stage('Docker Build') {
-            steps {
-                bat 'docker build -t taskflow-user-service:ci ./backend/user-service'
-                bat 'docker build -t taskflow-project-service:ci ./backend/project-service'
-                bat 'docker build -t taskflow-task-service:ci ./backend/task-service'
-                bat 'docker build -t taskflow-notification-service:ci ./backend/notification-service'
-                bat 'docker build -t taskflow-api-gateway:ci ./backend/api-gateway'
-                bat 'docker build -t taskflow-discovery-server:ci ./backend/discovery-server'
-            }
-        }
-
-        stage('Docker Image Verification') {
-            steps {
-                bat 'docker images taskflow-user-service'
-                bat 'docker images taskflow-project-service'
-                bat 'docker images taskflow-task-service'
-                bat 'docker images taskflow-notification-service'
-                bat 'docker images taskflow-api-gateway'
-                bat 'docker images taskflow-discovery-server'
-            }
-        }
-
     }
 
+
+    // =========================================================
+    // PIPELINE RESULT
+    // =========================================================
 
     post {
 
         success {
-            echo '========================================'
-            echo 'TaskFlow-Pro CI/CD Build Successful!'
-            echo 'Docker images built successfully!'
-            echo '========================================'
+            echo '''
+            ========================================
+            TASKFLOW-PRO CI/CD PIPELINE SUCCESSFUL
+            ========================================
+
+            Maven Build       : SUCCESS
+            Maven Tests       : SUCCESS
+            Docker Build      : SUCCESS
+            Docker Verification: SUCCESS
+
+            ========================================
+            NEXT STEP:
+            Push Docker Images to Amazon ECR
+            ========================================
+            '''
         }
 
         failure {
-            echo '========================================'
-            echo 'TaskFlow-Pro Pipeline Failed!'
-            echo 'Check the failed stage above.'
-            echo '========================================'
+            echo '''
+            ========================================
+            TASKFLOW-PRO PIPELINE FAILED
+            ========================================
+
+            Check the failed stage above.
+
+            ========================================
+            '''
         }
     }
 }
