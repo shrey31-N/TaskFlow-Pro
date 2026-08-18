@@ -1,6 +1,9 @@
 spring:
+  application:
+    name: task-service
+
   datasource:
-    url: jdbc:h2:mem:taskflow_test
+    url: jdbc:h2:mem:taskflow_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -8,9 +11,26 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-
-    show-sql: true
+    show-sql: false
 
   h2:
     console:
-      enabled: true
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+  instance:
+    enabled: false
+
+server:
+  port: 0

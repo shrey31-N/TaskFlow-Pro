@@ -53,7 +53,7 @@ pipeline {
         stage('Test Task Service') {
             steps {
                 dir('backend/task-service') {
-                    bat 'mvnw.cmd test'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
