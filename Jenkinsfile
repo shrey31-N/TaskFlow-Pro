@@ -169,7 +169,7 @@ pipeline {
                 echo        BUILD EUREKA SERVER
                 echo ========================================
 
-                docker build -t taskflow-eureka-server:1.0 backend\\eureka-server
+                docker build -t taskflow-eureka-server:1.0 backend\\discovery-server
                 '''
             }
         }
