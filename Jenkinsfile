@@ -2,15 +2,15 @@ pipeline {
 
     agent any
 
-    stage('Docker Verification') {
-        steps {
-            bat 'docker --version'
-            bat 'docker info'
-            bat 'docker images'
-        }
-    }
-
     stages {
+
+        stage('Docker Verification') {
+                steps {
+                    bat 'docker --version'
+                    bat 'docker info'
+                    bat 'docker images'
+                }
+            }
 
         stage('Checkout') {
             steps {
