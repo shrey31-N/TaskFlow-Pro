@@ -13,7 +13,7 @@ pipeline {
         stage('Build User Service') {
             steps {
                 dir('backend/user-service') {
-                    bat 'mvnw.cmd clean package -DskipTests'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
@@ -29,7 +29,7 @@ pipeline {
         stage('Build Project Service') {
             steps {
                 dir('backend/project-service') {
-                    bat 'mvnw.cmd clean package -DskipTests'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
@@ -45,7 +45,7 @@ pipeline {
         stage('Build Task Service') {
             steps {
                 dir('backend/task-service') {
-                    bat 'mvnw.cmd clean package -DskipTests'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
@@ -61,7 +61,7 @@ pipeline {
         stage('Build Notification Service') {
             steps {
                 dir('backend/notification-service') {
-                    bat 'mvnw.cmd clean package -DskipTests'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
@@ -77,7 +77,7 @@ pipeline {
         stage('Build API Gateway') {
             steps {
                 dir('backend/api-gateway') {
-                    bat 'mvnw.cmd clean package -DskipTests'
+                    bat 'mvnw.cmd package -DskipTests'
                 }
             }
         }
