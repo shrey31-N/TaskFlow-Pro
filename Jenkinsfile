@@ -4,14 +4,6 @@ pipeline {
 
     stages {
 
-        stage('Docker Verification') {
-                steps {
-                    bat 'docker --version'
-                    bat 'docker info'
-                    bat 'docker images'
-                }
-            }
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -198,7 +190,31 @@ pipeline {
                 '''
             }
         }
+
+        stage('Docker Build') {
+            steps {
+                bat 'docker build -t taskflow-user-service:ci ./backend/user-service'
+                bat 'docker build -t taskflow-project-service:ci ./backend/project-service'
+                bat 'docker build -t taskflow-task-service:ci ./backend/task-service'
+                bat 'docker build -t taskflow-notification-service:ci ./backend/notification-service'
+                bat 'docker build -t taskflow-api-gateway:ci ./backend/api-gateway'
+                bat 'docker build -t taskflow-discovery-server:ci ./backend/discovery-server'
+            }
+        }
+
+        stage('Docker Image Verification') {
+            steps {
+                bat 'docker images taskflow-user-service'
+                bat 'docker images taskflow-project-service'
+                bat 'docker images taskflow-task-service'
+                bat 'docker images taskflow-notification-service'
+                bat 'docker images taskflow-api-gateway'
+                bat 'docker images taskflow-discovery-server'
+            }
+        }
+
     }
+
 
     post {
 
