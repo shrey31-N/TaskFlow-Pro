@@ -242,6 +242,61 @@ pipeline {
                 '''
             }
         }
+
+        stage('AWS Verification') {
+            steps {
+                bat 'aws --version'
+                bat 'aws sts get-caller-identity'
+            }
+        }
+
+        stage('ECR Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-ecr-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    bat '''
+                    aws configure set aws_access_key_id "%AWS_ACCESS_KEY_ID%"
+                    aws configure set aws_secret_access_key "%AWS_SECRET_ACCESS_KEY%"
+                    aws configure set region ap-south-1
+
+                    aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 253924916082.dkr.ecr.ap-south-1.amazonaws.com
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Tag and Push to ECR') {
+            steps {
+                bat '''
+                echo ========================================
+                echo      PUSHING IMAGES TO AMAZON ECR
+                echo ========================================
+
+                docker tag taskflow-user-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-user-service:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-user-service:1.0
+
+                docker tag taskflow-project-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-project-service:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-project-service:1.0
+
+                docker tag taskflow-task-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-task-service:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-task-service:1.0
+
+                docker tag taskflow-notification-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-notification-service:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-notification-service:1.0
+
+                docker tag taskflow-api-gateway:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-api-gateway:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-api-gateway:1.0
+
+                docker tag taskflow-eureka-server:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-discovery-server:1.0
+                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-discovery-server:1.0
+                '''
+            }
+        }
     }
 
 
