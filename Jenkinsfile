@@ -163,7 +163,7 @@ pipeline {
         stage('Build Discovery Server') {
             steps {
                 dir('backend/discovery-server') {
-                    bat 'mvnw.cmd package -DskipTests'
+                    bat 'mvn.cmd package -DskipTests'
                 }
             }
         }
@@ -256,7 +256,6 @@ pipeline {
 
         stage('AWS Identity Check') {
             steps {
-
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'aws-ecr-credentials',
@@ -264,18 +263,11 @@ pipeline {
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
                 ]) {
-
                     bat '''
-                    echo ========================================
-                    echo        AWS CLI VERSION
-                    echo ========================================
-
+                    echo AWS CLI:
                     aws --version
 
-                    echo ========================================
-                    echo        AWS IDENTITY
-                    echo ========================================
-
+                    echo AWS Identity:
                     aws sts get-caller-identity
                     '''
                 }
@@ -299,9 +291,7 @@ pipeline {
                 ]) {
 
                     bat '''
-                    echo ========================================
                     echo        AMAZON ECR LOGIN
-                    echo ========================================
 
                     aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_REGISTRY%
                     '''
