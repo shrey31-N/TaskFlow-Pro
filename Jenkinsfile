@@ -2,10 +2,27 @@ pipeline {
 
     agent any
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        AWS_ACCOUNT_ID = '253924916082'
+        ECR_REGISTRY = '253924916082.dkr.ecr.ap-south-1.amazonaws.com'
+    }
+
     stages {
 
         // =====================================================
-        // 1. DOCKER VERIFICATION
+        // 1. CHECKOUT
+        // =====================================================
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+
+        // =====================================================
+        // 2. DOCKER VERIFICATION
         // =====================================================
 
         stage('Docker Verification') {
@@ -29,17 +46,6 @@ pipeline {
 
                 docker images
                 '''
-            }
-        }
-
-
-        // =====================================================
-        // 2. CHECKOUT
-        // =====================================================
-
-        stage('Checkout') {
-            steps {
-                checkout scm
             }
         }
 
@@ -99,12 +105,12 @@ pipeline {
         }
 
         /*
-         * Task Service integration tests are temporarily skipped.
+         * Task Service integration tests are currently skipped.
          *
          * Reason:
-         * These tests currently depend on other services/Eureka.
+         * The integration tests depend on other microservices/Eureka.
          *
-         * We will fix them after the deployment pipeline is working.
+         * We will address this after the deployment pipeline is working.
          */
 
 
@@ -243,8 +249,14 @@ pipeline {
             }
         }
 
+
+        // =====================================================
+        // 11. AWS IDENTITY CHECK
+        // =====================================================
+
         stage('AWS Identity Check') {
             steps {
+
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'aws-ecr-credentials',
@@ -252,16 +264,32 @@ pipeline {
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
                 ]) {
+
                     bat '''
-                        aws --version
-                        aws sts get-caller-identity
+                    echo ========================================
+                    echo        AWS CLI VERSION
+                    echo ========================================
+
+                    aws --version
+
+                    echo ========================================
+                    echo        AWS IDENTITY
+                    echo ========================================
+
+                    aws sts get-caller-identity
                     '''
                 }
             }
         }
+
+
+        // =====================================================
+        // 12. ECR LOGIN
+        // =====================================================
 
         stage('ECR Login') {
             steps {
+
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'aws-ecr-credentials',
@@ -269,42 +297,111 @@ pipeline {
                         passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
                 ]) {
-                    bat '''
-                    aws configure set aws_access_key_id "%AWS_ACCESS_KEY_ID%"
-                    aws configure set aws_secret_access_key "%AWS_SECRET_ACCESS_KEY%"
-                    aws configure set region ap-south-1
 
-                    aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 253924916082.dkr.ecr.ap-south-1.amazonaws.com
+                    bat '''
+                    echo ========================================
+                    echo        AMAZON ECR LOGIN
+                    echo ========================================
+
+                    aws ecr get-login-password --region %AWS_REGION% | docker login --username AWS --password-stdin %ECR_REGISTRY%
                     '''
                 }
             }
         }
 
+
+        // =====================================================
+        // 13. PUSH DOCKER IMAGES TO ECR
+        // =====================================================
+
         stage('Docker Tag and Push to ECR') {
             steps {
+
                 bat '''
                 echo ========================================
-                echo      PUSHING IMAGES TO AMAZON ECR
+                echo        PUSH USER SERVICE
                 echo ========================================
 
-                docker tag taskflow-user-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-user-service:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-user-service:1.0
+                docker tag taskflow-user-service:ci %ECR_REGISTRY%/taskflow-user-service:ci
+                docker push %ECR_REGISTRY%/taskflow-user-service:ci
 
-                docker tag taskflow-project-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-project-service:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-project-service:1.0
 
-                docker tag taskflow-task-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-task-service:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-task-service:1.0
+                echo ========================================
+                echo        PUSH PROJECT SERVICE
+                echo ========================================
 
-                docker tag taskflow-notification-service:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-notification-service:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-notification-service:1.0
+                docker tag taskflow-project-service:ci %ECR_REGISTRY%/taskflow-project-service:ci
+                docker push %ECR_REGISTRY%/taskflow-project-service:ci
 
-                docker tag taskflow-api-gateway:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-api-gateway:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-api-gateway:1.0
 
-                docker tag taskflow-eureka-server:1.0 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-discovery-server:1.0
-                docker push 253924916082.dkr.ecr.ap-south-1.amazonaws.com/taskflow-discovery-server:1.0
+                echo ========================================
+                echo        PUSH TASK SERVICE
+                echo ========================================
+
+                docker tag taskflow-task-service:ci %ECR_REGISTRY%/taskflow-task-service:ci
+                docker push %ECR_REGISTRY%/taskflow-task-service:ci
+
+
+                echo ========================================
+                echo        PUSH NOTIFICATION SERVICE
+                echo ========================================
+
+                docker tag taskflow-notification-service:ci %ECR_REGISTRY%/taskflow-notification-service:ci
+                docker push %ECR_REGISTRY%/taskflow-notification-service:ci
+
+
+                echo ========================================
+                echo        PUSH API GATEWAY
+                echo ========================================
+
+                docker tag taskflow-api-gateway:ci %ECR_REGISTRY%/taskflow-api-gateway:ci
+                docker push %ECR_REGISTRY%/taskflow-api-gateway:ci
+
+
+                echo ========================================
+                echo        PUSH DISCOVERY SERVER
+                echo ========================================
+
+                docker tag taskflow-discovery-server:ci %ECR_REGISTRY%/taskflow-discovery-server:ci
+                docker push %ECR_REGISTRY%/taskflow-discovery-server:ci
                 '''
+            }
+        }
+
+
+        // =====================================================
+        // 14. VERIFY ECR IMAGES
+        // =====================================================
+
+        stage('Verify ECR Images') {
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-ecr-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+
+                    bat '''
+                    echo ========================================
+                    echo        VERIFY ECR IMAGES
+                    echo ========================================
+
+                    aws ecr describe-images --repository-name taskflow-user-service --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+
+                    aws ecr describe-images --repository-name taskflow-project-service --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+
+                    aws ecr describe-images --repository-name taskflow-task-service --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+
+                    aws ecr describe-images --repository-name taskflow-notification-service --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+
+                    aws ecr describe-images --repository-name taskflow-api-gateway --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+
+                    aws ecr describe-images --repository-name taskflow-discovery-server --region %AWS_REGION% --query "imageDetails[].imageTags" --output table
+                    '''
+                }
             }
         }
     }
@@ -322,14 +419,19 @@ pipeline {
             TASKFLOW-PRO CI/CD PIPELINE SUCCESSFUL
             ========================================
 
-            Maven Build       : SUCCESS
-            Maven Tests       : SUCCESS
-            Docker Build      : SUCCESS
-            Docker Verification: SUCCESS
+            Checkout              : SUCCESS
+            Maven Build           : SUCCESS
+            Maven Tests           : SUCCESS
+            Docker Build          : SUCCESS
+            Docker Verification   : SUCCESS
+            AWS Authentication    : SUCCESS
+            ECR Login             : SUCCESS
+            Docker Push to ECR    : SUCCESS
+            ECR Verification      : SUCCESS
 
             ========================================
             NEXT STEP:
-            Push Docker Images to Amazon ECR
+            Deploy infrastructure using Terraform
             ========================================
             '''
         }
