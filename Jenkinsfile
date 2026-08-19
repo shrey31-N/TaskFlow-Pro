@@ -243,10 +243,20 @@ pipeline {
             }
         }
 
-        stage('AWS Verification') {
+        stage('AWS Identity Check') {
             steps {
-                bat 'aws --version'
-                bat 'aws sts get-caller-identity'
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-jenkins',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    bat '''
+                        aws --version
+                        aws sts get-caller-identity
+                    '''
+                }
             }
         }
 
